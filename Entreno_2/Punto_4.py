@@ -184,7 +184,7 @@ def busqueda_local(coord_ini: tuple, lbd: float):
 #print(evaluar_factibilidad((-6,2)))
 
 ### TODO: coordenadas iniciales y distancia del radar cuadrado de búsqueda (lbd) 
-coor_inicial = (0,-6.0)
+coor_inicial = (6,0)
 lbd = 0.01
 
 ### TODO: invocar el método de búsqueda local
