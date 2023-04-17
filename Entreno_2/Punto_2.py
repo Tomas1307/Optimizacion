@@ -121,7 +121,7 @@ def optimizacion(file_name):
     for i in F:
         modelo += lp.lpSum(s_j[j]*y[i,j] <= k_i[i]*x[i] for j in V)
 
-
+#set
 
     
 
