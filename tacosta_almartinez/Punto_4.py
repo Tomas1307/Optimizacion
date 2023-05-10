@@ -1,3 +1,9 @@
+#-------
+# AUTHORS
+# t.acosta - 202011237
+# al.martinezc1 - 202012606
+#-------
+
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
