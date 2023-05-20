@@ -1,3 +1,9 @@
+#-------
+# AUTHORS
+# t.acosta - 202011237
+# l.guerrerom - 202021248 
+#-------
+
 import pulp as lp
 import pandas as pd
 import tkinter as tk
