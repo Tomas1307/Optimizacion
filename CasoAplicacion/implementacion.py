@@ -45,7 +45,7 @@ def implementacion():
 
     #Demanda semanal promedio para cada producto i en P
 
-    #cantidad de tiempo disponible de trabajo entre semana
+    #cantidad de tiempo regular de trabajo
 
     h = 120
 
@@ -53,38 +53,30 @@ def implementacion():
 
     e = 48
 
-    #factores de rendimiento de produccion de cada producto
+    #factores de rendimiento de produccion de cada parte
 
-    f_i = {i : rendimiento[i]["Rendimiento"] for i in P if not pd.isna(i)}
+    f = {i : rendimiento[i]["Rendimiento"] for i in P if not pd.isna(i)}
 
-    #print(f_i)
+    print("f[i]",f["Amortiguadores"])
 
     #print(rendimiento)
     
+    #Demanda semanal de la parte i en P
+    d = {i: demandas[i] for i in P if not pd.isna(i)}
 
-    d_i = {i: demandas[i] for i in P if not pd.isna(i)}
 
 
-    #print(d_i)
+
+    print(d)
 
     #tiempo requerido en horas del aislamiento de la maquina j en M
 
-    a_ij = {(i,j) : alistamiento[i][j] for i in P for j in M if not pd.isna(alistamiento[i][j])}
+    a = {(i,j) : alistamiento[i][j] for i in P for j in M if not pd.isna(alistamiento[i][j])}
 
-
+    #print(a["Amortiguadores",1])
     #tasa de produccion de la parte i en P de la maquina j en M
 
-    t_ij = {(i,j) : rendimiento[i][j] for i in P for j in M if not pd.isna(rendimiento[i][j])}
-    
-    #costo de horas extra maquina
-    
-    c = 30
-
-    #costo horas extra personal de apoyo
-
-    q = 40
-
-    #Creacion problema
+    t = {(i,j) : rendimiento[i][j] for i in P for j in M if not pd.isna(rendimiento[i][j])}
 
     prob = lp.LpProblem('CasoAplicacion', sense = lp.LpMinimize)
 
@@ -92,61 +84,57 @@ def implementacion():
     #--VariablesDecision
 
     #Variable binaria si se escoge la maquina para producir la parte
-    x={(i,j):lp.LpVariable(f'Si_se_escoge_maquina_{j}_para_parte_{i}',lowBound=0,cat=lp.LpBinary)for i in P for j in M }
+    X = {(i, j): lp.LpVariable(f'Si_se_escoge_maquina_{j}_para_producir_{i}', cat=lp.LpBinary) for i in P for j in M}
 
-    y={(i,j):lp.LpVariable(f'si_se_alista_maquina_{j}_para_parte_{i}',lowBound=0,cat=lp.LpBinary)for i in P for j in M }
+    R={(i,j):lp.LpVariable(f'Horas_regulares_maquina_{j}_para_{i}',lowBound=0,cat=lp.LpContinuous)for i in P for j in M }
 
-    R={(i,j):lp.LpVariable(f'Horas_regulares_maquina_{j}_para_parte_{i}',lowBound=0,cat=lp.LpContinuous)for i in P for j in M }
-
-    O={(i,j):lp.LpVariable(f'Horas_extra_maquina_{j}_para_parte_{i}',lowBound=0,cat=lp.LpContinuous)for i in P for j in M }
+    O={(i,j):lp.LpVariable(f'Horas_extra_maquina_{j}_para_{i}',lowBound=0,cat=lp.LpContinuous)for i in P for j in M }
 
 
     
     #Restricciones
     for i in P:
         #No tener inventario/satisfacer la demanda semanal:
-        prob += sum((O[i,j] + R[i,j])* t_ij[(i,j)]for j in M if (i,j) in t_ij) * f_i[i] == d_i[i] 
-        #No superar la cantidad de horas regulares
-        prob += sum(R[i,j] for j in M) <= h 
-        #No superar la cantidad de horas extras
-        prob += sum(O[i,j] for j in M) <= e 
+        prob += sum((O[i,j] + R[i,j])* t[i,j] * f[i] for j in M if (i,j) in t)  == d[i]
 
-        for j in M:
-
-            #Si se decide alistar la maquina se debe producir mínimo una unidad del producto 
-            prob += x[i,j] + y[i,j] != 1
-
-            #Para producir la parte se debe alistar la maquina
-
-            prob += y[i,j] >= x[i,j]
-
-            #Solo se debe alistar una vez la maquina 
-
-            prob += y[i,j] <= 1
+        print (sum((O[i,j] + R[i,j])* t[i,j] * f[i] for j in M if (i,j) in t)  == d[i])
+    
 
     for j in M:
 
-        #Debe cumplirse el tiempo de alistamiento 
-        prob += sum(R[i,j] >= a_ij[i,j] * y[i,j] for i in P if (i,j) in a_ij) 
+        #No superar la cantidad de horas disponibles
+
+        prob += sum(O[i,j] + R[i,j] + a[i,j] for i in P if (i,j) in a) <= (e + h) 
+
+        #No superar el t en horas extra
+        prob += sum(R[i,j] for i in P) <= h - sum(a[i,j]*X[i,j] for i in P if (i,j) in a)
+
+        #No superar el t en horas extra
+        prob += sum(O[i,j] <= e *X[i,j] for i in P)
+
+        #print(sum(O[i,j] + R[i,j] + (X[i,j]) * a[i,j] for i in P if (i,j) in a) <= e + h)
+
 
     #print(rendimiento["Amortiguadores"]["Rendimiento"])
 
     #Funcion Objetivo
 
-    prob += sum(O[i,j]*(c+q) for i in P for j in M)
+    prob += sum(O[i,j] for i in P for j in M)
 
     #Resolver problema
 
     prob.solve()
 
     #Imprimir resultados
-    print("Minimizar costos extra:\t",prob.objective.value(),"\n")
+    print("Minimizar horas extra:\t",prob.objective.value(),"\n")
+
 
     #Imprimir variables
     for variable in prob.variables():
-        if "Horas_extra" in variable.name and variable.varValue > 0:
-            print(variable.varValue)
-        
+
+        print(variable.name, variable.value())
+
+    
     
 
     
